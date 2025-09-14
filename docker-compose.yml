@@ -1,0 +1,41 @@
+services:
+
+  frontend:
+    build: ./frontend
+    container_name: ai_stylist_frontend
+    ports:
+      - "3000:80"
+
+  db:
+    image: postgres:17.6
+    container_name: ai_stylist_db
+    restart: always
+    environment:
+      POSTGRES_DB: stylistdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ai-stylist-app_db_data:/var/lib/postgresql/data
+
+    
+  backend:
+    build: ./backend
+    container_name: ai_stylist_backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://admin:admin123@db:5432/stylistdb
+      SECRET_KEY: supersecretkey
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  ai-stylist-app_db_data:
+    external: true
