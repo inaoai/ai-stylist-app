@@ -1,0 +1,7 @@
+services:
+  cv_service:
+    build: ./cv_service
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./cv_service:/app
