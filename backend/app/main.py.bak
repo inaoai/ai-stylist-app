@@ -1,3 +1,4 @@
+# backend/app/main.py
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +8,7 @@ from jose import jwt, JWTError
 from datetime import datetime, timedelta
 import psycopg2
 import os
-from app import profile, selfie,quiz   # import both routers
+from app import profile, selfie, quiz   # import routers
 
 app = FastAPI()
 
@@ -16,7 +17,10 @@ ALGORITHM = "HS256"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 auth_scheme = HTTPBearer()
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# include routers (quiz mounted under /api to match frontend)
 app.include_router(profile.router, prefix="/api")
+app.include_router(quiz.router, prefix="/api")
 app.include_router(selfie.router, prefix="/api")
 
 # ---------- Helpers ----------
@@ -67,7 +71,6 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(auth_sc
 
 
 # ---------- Routes ----------
-# main.py — replace existing @app.post("/register") endpoint with this
 @app.post("/register")
 def register(user: RegisterUser):
     conn = get_db_conn()
@@ -103,7 +106,6 @@ def register(user: RegisterUser):
     }
 
 
-
 @app.post("/login")
 def login(user: LoginUser):
     conn = get_db_conn()
@@ -122,6 +124,7 @@ def login(user: LoginUser):
     # include both sub (email) and user_id claim so frontend can parse either
     token = create_access_token(data={"sub": user.email, "user_id": user_id}, expires_delta=access_token_expires)
     return {"access_token": token, "token_type": "bearer", "user_id": user_id}
+
 
 @app.get("/users/me")
 def read_users_me(current_user: dict = Depends(get_current_user)):
