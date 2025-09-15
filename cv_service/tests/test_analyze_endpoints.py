@@ -1,0 +1,45 @@
+import os
+import pytest
+from fastapi.testclient import TestClient
+
+from main import app
+
+
+client = TestClient(app)
+
+# Path to a sample image relative to project root; tests skip if none available.
+
+SAMPLE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "undertone"))
+
+
+SAMPLE_IMAGE = None
+print('TEST: SAMPLE_DIR =', SAMPLE_DIR)
+if os.path.isdir(SAMPLE_DIR):
+    for fname in sorted(os.listdir(SAMPLE_DIR)):
+        if fname.lower().endswith((".jpg", ".jpeg", ".png")):
+            SAMPLE_IMAGE = os.path.join(SAMPLE_DIR, fname)
+            break
+
+pytestmark = pytest.mark.skipif(SAMPLE_IMAGE is None, reason="No sample image found in data/undertone - skipping CV tests")
+
+def test_analyze_body_returns_bbox_or_detection():
+    with open(SAMPLE_IMAGE, "rb") as f:
+        files = {"file": (os.path.basename(SAMPLE_IMAGE), f, "image/jpeg")}
+        r = client.post("/analyze/body", files=files, timeout=30)
+    assert r.status_code == 200
+    data = r.json()
+    assert "status" in data
+    if data.get("status") == "ok":
+        assert ("body_box" in data and isinstance(data["body_box"], dict)) or ("body_detected" in data)
+
+def test_analyze_undertone_returns_undertone():
+    with open(SAMPLE_IMAGE, "rb") as f:
+        files = {"file": (os.path.basename(SAMPLE_IMAGE), f, "image/jpeg")}
+        r = client.post("/analyze/undertone", files=files, timeout=30)
+    assert r.status_code == 200
+    data = r.json()
+    if data.get("status") == "ok" or ("undertone" in data):
+        assert "undertone" in data
+        assert isinstance(data["undertone"], str)
+        assert "confidence" in data
+        assert isinstance(data["confidence"], (float, int))
